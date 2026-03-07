@@ -35,12 +35,14 @@ src/
 ```bash
 bun run build          # Build ESM
 bun run clean          # Remove dist/
-bun test               # Run tests
+bun test               # Run tests (Vitest, src/business/stores/historiesStore.test.ts)
 bun run typecheck      # TypeScript check
 bun run lint           # Run ESLint
 bun run verify         # All checks + build (use before commit)
 bun run prepublishOnly # Clean + build (runs on publish)
 ```
+
+Tests: Vitest, located in `src/business/stores/historiesStore.test.ts`.
 
 ## Key Concepts
 
@@ -105,9 +107,3 @@ cravings_app / cravings_app_rn
 - `useRef` guards prevent duplicate fetches on mount; be careful not to break this guard when modifying the hook
 - This is a published npm package (`@sudobility/cravings_lib`) -- coordinate breaking changes with cravings_app and cravings_app_rn
 
-## Testing
-
-- Run tests: `bun test`
-- Tests are in `src/business/stores/historiesStore.test.ts`
-- Tests cover Zustand store operations (set, get, add, update, remove) and hook behavior
-- Uses Vitest as the test runner
