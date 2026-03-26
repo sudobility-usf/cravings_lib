@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import type { Restaurant } from '@sudobility/cravings_client';
+
+export interface Restaurant {
+  name: string;
+  address: string;
+  distance: string;
+}
 
 /**
  * Default cache expiration time in milliseconds (10 minutes).

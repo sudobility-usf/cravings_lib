@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import type { NetworkClient, Optional } from '@sudobility/cravings_types';
+import { useRestaurantSearch } from '@sudobility/cravings_client';
 import {
   type Restaurant,
-  useRestaurantSearch,
-} from '@sudobility/cravings_client';
-import { useRestaurantSearchStore } from '../stores/restaurantSearchStore';
+  useRestaurantSearchStore,
+} from '../stores/restaurantSearchStore';
 
 /**
  * Configuration for the {@link useRestaurantSearchManager} hook.
