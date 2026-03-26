@@ -1,6 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import type { NetworkClient, Optional } from '@sudobility/cravings_types';
-import { useRestaurantSearch, type Restaurant } from '@sudobility/cravings_client';
+import {
+  type Restaurant,
+  useRestaurantSearch,
+} from '@sudobility/cravings_client';
 import { useRestaurantSearchStore } from '../stores/restaurantSearchStore';
 
 /**
@@ -103,8 +106,12 @@ export const useRestaurantSearchManager = ({
     refetch,
   } = useRestaurantSearch({ networkClient, baseUrl, location, dish, enabled });
 
-  const setRestaurants = useRestaurantSearchStore(state => state.setRestaurants);
-  const getRestaurants = useRestaurantSearchStore(state => state.getRestaurants);
+  const setRestaurants = useRestaurantSearchStore(
+    state => state.setRestaurants
+  );
+  const getRestaurants = useRestaurantSearchStore(
+    state => state.getRestaurants
+  );
 
   const cachedRestaurants = getRestaurants(cacheKey);
 
@@ -114,19 +121,18 @@ export const useRestaurantSearchManager = ({
     }
   }, [clientRestaurants, cacheKey, setRestaurants]);
 
-  const restaurants =
-    clientRestaurants.length > 0 ? clientRestaurants : (cachedRestaurants ?? []);
-  const isCached =
-    clientRestaurants.length === 0 && (cachedRestaurants?.length ?? 0) > 0;
-
   return useMemo(
     () => ({
-      restaurants,
+      restaurants:
+        clientRestaurants.length > 0
+          ? clientRestaurants
+          : (cachedRestaurants ?? []),
       isLoading,
       error,
-      isCached,
+      isCached:
+        clientRestaurants.length === 0 && (cachedRestaurants?.length ?? 0) > 0,
       search: refetch,
     }),
-    [restaurants, isLoading, error, isCached, refetch]
+    [clientRestaurants, cachedRestaurants, isLoading, error, refetch]
   );
 };
