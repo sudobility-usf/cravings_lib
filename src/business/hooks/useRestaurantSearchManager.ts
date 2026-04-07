@@ -98,12 +98,7 @@ export const useRestaurantSearchManager = ({
   dish,
   enabled = true,
 }: UseRestaurantSearchManagerConfig): UseRestaurantSearchManagerReturn => {
-  const {
-    restaurants,
-    isLoading,
-    error,
-    refetch,
-  } = useRestaurantSearch({
+  const { restaurants, isLoading, error, refetch } = useRestaurantSearch({
     networkClient,
     baseUrl,
     location,
