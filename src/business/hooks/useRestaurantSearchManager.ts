@@ -1,10 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { NetworkClient, Optional } from '@sudobility/cravings_types';
+import type { Restaurant } from '@sudobility/cravings_client';
 import { useRestaurantSearch } from '@sudobility/cravings_client';
-import {
-  type Restaurant,
-  useRestaurantSearchStore,
-} from '../stores/restaurantSearchStore';
 
 /**
  * Configuration for the {@link useRestaurantSearchManager} hook.
@@ -22,14 +19,23 @@ import {
 export interface UseRestaurantSearchManagerConfig {
   /** The base URL of the Cravings API server. */
   baseUrl: string;
-  /** A {@link NetworkClient} implementation for HTTP requests. */
+
+  /**
+   * A {@link NetworkClient} implementation for HTTP requests.
+   * Injected to allow different fetch implementations per platform (web vs React Native).
+   */
   networkClient: NetworkClient;
+
   /** The location to search near (e.g., "San Francisco"). */
   location: string;
+
   /** The dish to search for (e.g., "tacos"). */
   dish: string;
+
   /**
-   * Whether the query should execute.
+   * Whether the search query should execute.
+   * Defaults to `true`. Set to `false` to defer execution until the user triggers a search.
+   *
    * @defaultValue `true`
    */
   enabled?: boolean;
@@ -39,54 +45,49 @@ export interface UseRestaurantSearchManagerConfig {
  * Return type for the {@link useRestaurantSearchManager} hook.
  */
 export interface UseRestaurantSearchManagerReturn {
-  /**
-   * The list of matching restaurants.
-   * Prefers fresh server data; falls back to cached data while loading.
-   */
+  /** The list of matching restaurants, or an empty array if not yet loaded. */
   restaurants: Restaurant[];
-  /** Whether the query is currently in flight. */
+
+  /** Whether the search query is currently loading. */
   isLoading: boolean;
-  /** An error message if the query failed, or `null` if no error. */
-  error: Optional<string>;
+
   /**
-   * Whether the displayed data is from the client-side cache rather than
-   * a fresh server response.
+   * An error message if the search failed, or `null` if no error.
    */
-  isCached: boolean;
-  /** Manually triggers a refetch. */
-  search: () => void;
+  error: Optional<string>;
+
+  /** Function to manually trigger a refetch of the search results. */
+  refetch: () => void;
 }
 
 /**
- * Unified business logic hook that combines {@link useRestaurantSearch} with
- * Zustand caching into a single interface for UI layers.
+ * Business logic hook that wraps the cravings_client `useRestaurantSearch` hook
+ * into a unified interface for UI layers.
  *
- * Orchestrates:
- * - **Data fetching** via `useRestaurantSearch` from `@sudobility/cravings_client`
- * - **Client-side caching** via `useRestaurantSearchStore` (keyed by `"location:dish"`)
- * - **Cache fallback** — shows cached results while waiting for the server
- *
- * This is the hook consumed by `cravings_app_rn`.
+ * This is the primary search hook consumed by `cravings_app` and `cravings_app_rn`.
+ * It orchestrates:
+ * - **Data fetching** via the TanStack Query hook from `@sudobility/cravings_client`
+ * - **Query gating** -- only executes when `enabled` is `true` and both `location` and `dish` are non-empty
+ * - **Error propagation** -- surfaces errors so the UI can display feedback
  *
  * @param config - The hook configuration (see {@link UseRestaurantSearchManagerConfig})
- * @returns An object with data, state, and a search trigger (see {@link UseRestaurantSearchManagerReturn})
+ * @returns An object with restaurant data, loading/error state, and refetch (see {@link UseRestaurantSearchManagerReturn})
  *
  * @example
  * ```typescript
  * import { useRestaurantSearchManager } from '@sudobility/cravings_lib';
  *
  * function SearchScreen() {
- *   const { restaurants, isLoading, error, isCached, search } =
- *     useRestaurantSearchManager({
- *       baseUrl: 'https://api.example.com',
- *       networkClient,
- *       location: 'San Francisco',
- *       dish: 'tacos',
- *     });
+ *   const { restaurants, isLoading, error, refetch } = useRestaurantSearchManager({
+ *     baseUrl: 'https://api.example.com',
+ *     networkClient,
+ *     location: 'San Francisco',
+ *     dish: 'tacos',
+ *   });
  *
- *   if (isLoading) return <ActivityIndicator />;
- *   if (error) return <Text>{error}</Text>;
- *   return <FlatList data={restaurants} />;
+ *   if (isLoading) return <Loading />;
+ *   if (error) return <ErrorMessage message={error} />;
+ *   return <RestaurantList items={restaurants} />;
  * }
  * ```
  */
@@ -97,42 +98,26 @@ export const useRestaurantSearchManager = ({
   dish,
   enabled = true,
 }: UseRestaurantSearchManagerConfig): UseRestaurantSearchManagerReturn => {
-  const cacheKey = `${location}:${dish}`;
-
   const {
-    restaurants: clientRestaurants,
+    restaurants,
     isLoading,
     error,
     refetch,
-  } = useRestaurantSearch({ networkClient, baseUrl, location, dish, enabled });
-
-  const setRestaurants = useRestaurantSearchStore(
-    state => state.setRestaurants
-  );
-  const getRestaurants = useRestaurantSearchStore(
-    state => state.getRestaurants
-  );
-
-  const cachedRestaurants = getRestaurants(cacheKey);
-
-  useEffect(() => {
-    if (clientRestaurants.length > 0) {
-      setRestaurants(cacheKey, clientRestaurants);
-    }
-  }, [clientRestaurants, cacheKey, setRestaurants]);
+  } = useRestaurantSearch({
+    networkClient,
+    baseUrl,
+    location,
+    dish,
+    enabled,
+  });
 
   return useMemo(
     () => ({
-      restaurants:
-        clientRestaurants.length > 0
-          ? clientRestaurants
-          : (cachedRestaurants ?? []),
+      restaurants,
       isLoading,
       error,
-      isCached:
-        clientRestaurants.length === 0 && (cachedRestaurants?.length ?? 0) > 0,
-      search: refetch,
+      refetch,
     }),
-    [clientRestaurants, cachedRestaurants, isLoading, error, refetch]
+    [restaurants, isLoading, error, refetch]
   );
 };
